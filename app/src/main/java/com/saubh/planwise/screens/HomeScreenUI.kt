@@ -44,6 +44,7 @@ import com.saubh.planwise.data.Project
 import com.saubh.planwise.data.ProjectViewModel
 import com.saubh.planwise.navigation.Routes
 import java.text.NumberFormat
+import java.util.Locale
 
 class HomeScreenUI(
     private val viewModel: ProjectViewModel,
@@ -262,7 +263,7 @@ class HomeScreenUI(
                 }
 
                 Text(
-                    text = formatCurrency(project.totalPayment),
+                    text = viewModel.formatCurrency(project.totalPayment),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
@@ -271,7 +272,4 @@ class HomeScreenUI(
         }
     }
 
-    private fun formatCurrency(amount: Double): String {
-        return NumberFormat.getCurrencyInstance().format(amount)
-    }
 }

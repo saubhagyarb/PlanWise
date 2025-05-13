@@ -17,6 +17,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Payment
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -28,6 +31,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -41,13 +45,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.saubh.planwise.data.Project
 import com.saubh.planwise.data.ProjectViewModel
 import com.saubh.planwise.navigation.Routes
-import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -61,6 +66,7 @@ class ProjectDetailScreenUI(
     fun ProjectDetailScreen(projectId: Long) {
         val project = viewModel.projectList.find { it.id == projectId }
         var showDeleteDialog by remember { mutableStateOf(false) }
+        val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
         if (project == null) {
             ProjectNotFound()
@@ -69,52 +75,64 @@ class ProjectDetailScreenUI(
 
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = { Text(text = "Project Details") },
+               TopAppBar(
+                    title = {
+                        Column {
+                            Text(text = project.clientName)
+                            Text(
+                                text = "Created ${viewModel.formatRelativeDate(project.creationDate)}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
                     navigationIcon = {
                         IconButton(onClick = { navController.navigateUp() }) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back"
-                            )
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                         }
                     },
                     actions = {
                         IconButton(onClick = { navController.navigate("${Routes.ADD_EDIT_PROJECT}?projectId=${project.id}") }) {
-                            Icon(
-                                imageVector = Icons.Default.Edit,
-                                contentDescription = "Edit Project"
-                            )
+                            Icon(Icons.Default.Edit, "Edit")
                         }
                         IconButton(onClick = { showDeleteDialog = true }) {
                             Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = "Delete Project",
+                                Icons.Default.Delete,
+                                "Delete",
                                 tint = MaterialTheme.colorScheme.error
                             )
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
+                    scrollBehavior = scrollBehavior,
+                    colors = TopAppBarDefaults.largeTopAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        scrolledContainerColor = MaterialTheme.colorScheme.surface
                     )
                 )
             }
-        ) { innerPadding ->
+        ) { padding ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(16.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
             ) {
-                ClientInfoCard(project)
-                PaymentInfoCard(project)
-                ProjectStatusCard(project) { updatedProject ->
-                    viewModel.updateProject(updatedProject)
+                // Quick Stats Card
+                QuickStatsCard(project)
+
+                // Main Content
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    ClientInfoCard(project)
+                    PaymentInfoCard(project)
+                    ProjectStatusCard(project) { updatedProject ->
+                        viewModel.updateProject(updatedProject)
+                    }
+                    ProjectDescriptionCard(project)
+                    ProjectTimelineCard(project)
                 }
-                ProjectDescriptionCard(project)
-                ProjectTimelineCard(project)
             }
         }
 
@@ -125,6 +143,87 @@ class ProjectDetailScreenUI(
                     viewModel.deleteProject(project)
                     navController.navigateUp()
                 }
+            )
+        }
+    }
+
+
+    @Composable
+    fun QuickStatsCard(project: Project) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.background,
+            tonalElevation = 0.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    ProjectStatItem(
+                        label = "Status",
+                        value = if (project.isCompleted) "Completed" else "In Progress",
+                        icon = if (project.isCompleted)
+                            Icons.Default.Check
+                        else
+                            Icons.Default.Schedule
+                    )
+
+                    ProjectStatItem(
+                        label = "Payment",
+                        value = "${(project.paymentProgress * 100).toInt()}%",
+                        icon = Icons.Default.Payment,
+                        tint = if (project.isPaid)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.error
+                    )
+
+                    ProjectStatItem(
+                        label = "Days Active",
+                        value = viewModel.calculateDaysActive(project.creationDate),
+                        icon = Icons.Default.Timer
+                    )
+                }
+
+                PaymentProgressBar(
+                    progress = project.paymentProgress,
+                    isPaid = project.isPaid
+                )
+            }
+        }
+    }
+
+    @Composable
+    fun ProjectStatItem(
+        label: String,
+        value: String,
+        icon: ImageVector,
+        tint: Color = MaterialTheme.colorScheme.onBackground
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(24.dp)
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = tint
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                color = tint.copy(alpha = 0.7f),
             )
         }
     }
@@ -197,7 +296,7 @@ class ProjectDetailScreenUI(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = formatCurrency(project.advancePayment),
+                            text = viewModel.formatCurrency(project.advancePayment),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -210,7 +309,7 @@ class ProjectDetailScreenUI(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = formatCurrency(project.totalPayment),
+                            text = viewModel.formatCurrency(project.totalPayment),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -224,11 +323,6 @@ class ProjectDetailScreenUI(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                PaymentProgressBar(
-                    progress = project.paymentProgress,
-                    isPaid = project.isPaid
-                )
-
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -240,7 +334,7 @@ class ProjectDetailScreenUI(
                     )
 
                     Text(
-                        text = "Remaining: ${formatCurrency(project.totalPayment - project.advancePayment)}",
+                        text = "Remaining: ${viewModel.formatCurrency(project.totalPayment - project.advancePayment)}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (project.isPaid) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                     )
@@ -430,10 +524,6 @@ class ProjectDetailScreenUI(
                 }
             }
         )
-    }
-
-    private fun formatCurrency(amount: Double): String {
-        return NumberFormat.getCurrencyInstance().format(amount)
     }
 
     private fun formatDate(date: Date): String {
