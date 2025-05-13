@@ -115,12 +115,12 @@ class AddEditScreenUI(
                                 clientName = it
                                 clientNameError = ""
                             },
-                            label = { Text("Client Name") },
+                            label = { Text("Project Name") },
                             modifier = Modifier.fillMaxWidth(),
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Default.Person,
-                                    contentDescription = "Client Name"
+                                    contentDescription = "Project Name"
                                 )
                             },
                             isError = clientNameError.isNotEmpty(),

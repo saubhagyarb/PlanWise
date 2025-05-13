@@ -90,7 +90,10 @@ class SearchScreenUI(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Search by name or phone") },
+                    label = { Text(
+                        text = "Search by name or phone",
+                        style = MaterialTheme.typography.bodyMedium
+                    ) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Search,

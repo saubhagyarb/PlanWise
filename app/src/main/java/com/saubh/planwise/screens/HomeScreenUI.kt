@@ -94,7 +94,7 @@ class HomeScreenUI(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Welcome, ${viewModel.getTimeOfDay()}!",
+                        text = "Good ${viewModel.getTimeOfDay()}!",
                         style = MaterialTheme.typography.titleLarge
                     )
 
@@ -251,7 +251,7 @@ class HomeScreenUI(
                     }
 
                     IconButton(onClick = {
-                        navController.navigate(Routes.editProjectRoute(project.id))
+                        navController.navigate("${Routes.ADD_EDIT_PROJECT}?projectId=${project.id}")
                     }) {
                         Icon(
                             imageVector = Icons.Default.Edit,
