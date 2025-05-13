@@ -69,8 +69,8 @@ class AddEditScreenUI(
         var advancePayment by remember { mutableStateOf(project?.advancePayment?.toString() ?: "") }
         var totalPayment by remember { mutableStateOf(project?.totalPayment?.toString() ?: "") }
         var description by remember { mutableStateOf(project?.description ?: "") }
-        var isCompleted by remember { mutableStateOf(project?.isCompleted ?: false) }
-        var isPaid by remember { mutableStateOf(project?.isPaid ?: false) }
+        var isCompleted by remember { mutableStateOf(project?.isCompleted == true) }
+        var isPaid by remember { mutableStateOf(project?.isPaid == true) }
 
         var clientNameError by remember { mutableStateOf("") }
         var phoneNumberError by remember { mutableStateOf("") }

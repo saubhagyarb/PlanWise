@@ -43,8 +43,6 @@ import androidx.navigation.NavController
 import com.saubh.planwise.data.Project
 import com.saubh.planwise.data.ProjectViewModel
 import com.saubh.planwise.navigation.Routes
-import java.text.NumberFormat
-import java.util.Locale
 
 class HomeScreenUI(
     private val viewModel: ProjectViewModel,
