@@ -1,51 +1,28 @@
 package com.saubh.planwise.screens
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AttachMoney
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.saubh.planwise.data.Project
 import com.saubh.planwise.data.ProjectViewModel
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.util.Date
 
@@ -63,6 +40,7 @@ class AddEditScreenUI(
 
         val snackbarHostState = remember { SnackbarHostState() }
         val scope = rememberCoroutineScope()
+        val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
         var clientName by remember { mutableStateOf(project?.clientName ?: "") }
         var phoneNumber by remember { mutableStateOf(project?.phoneNumber ?: "") }
@@ -77,19 +55,52 @@ class AddEditScreenUI(
         var advancePaymentError by remember { mutableStateOf("") }
         var totalPaymentError by remember { mutableStateOf("") }
 
+        val focusManager = LocalFocusManager.current
+
         Scaffold(
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
             topBar = {
                 TopAppBar(
-                    title = { Text(text = if (isEditMode) "Edit Project" else "Add New Project") },
-                    navigationIcon = {
-                        IconButton(onClick = { navController.navigateUp() }) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back"
-                            )
+                    title = {
+                        Column {
+                            Text(text = if (isEditMode) "Edit Project" else "Add New Project")
+                            if (isEditMode) {
+                                Text(
+                                    text = "Last modified ${viewModel.formatRelativeDate(project?.lastModifiedDate ?: Date())}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(
+                    navigationIcon = {
+                        IconButton(onClick = { navController.navigateUp() }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        }
+                    },
+                    actions = {
+                        if (isEditMode) {
+                            FilledTonalIconButton(
+                                onClick = {
+                                    scope.launch {
+                                        val result = snackbarHostState.showSnackbar(
+                                            message = "Are you sure you want to delete this project?",
+                                            actionLabel = "Delete",
+                                            duration = SnackbarDuration.Short
+                                        )
+                                        if (result == SnackbarResult.ActionPerformed) {
+                                            viewModel.deleteProject(project!!)
+                                            navController.navigateUp()
+                                        }
+                                    }
+                                }
+                            ) {
+                                Icon(Icons.Default.Delete, "Delete Project")
+                            }
+                        }
+                    },
+                    scrollBehavior = scrollBehavior,
+                    colors = TopAppBarDefaults.largeTopAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surface
                     )
                 )
@@ -100,15 +111,19 @@ class AddEditScreenUI(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(16.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .verticalScroll(rememberScrollState())
             ) {
-                FormCard {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(24.dp)
+                ) {
+                    // Basic Information Section
+                    FormSection(
+                        title = "Basic Information",
+                        icon = Icons.Default.Info
                     ) {
-                        // Client Name
                         OutlinedTextField(
                             value = clientName,
                             onValueChange = {
@@ -118,18 +133,20 @@ class AddEditScreenUI(
                             label = { Text("Project Name") },
                             modifier = Modifier.fillMaxWidth(),
                             leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Person,
-                                    contentDescription = "Project Name"
-                                )
+                                Icon(Icons.Default.Person, "Project Name")
                             },
+                            keyboardOptions = KeyboardOptions(
+                                imeAction = ImeAction.Next
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                            ),
                             isError = clientNameError.isNotEmpty(),
                             supportingText = if (clientNameError.isNotEmpty()) {
                                 { Text(clientNameError) }
                             } else null
                         )
 
-                        // Phone Number
                         OutlinedTextField(
                             value = phoneNumber,
                             onValueChange = {
@@ -139,21 +156,27 @@ class AddEditScreenUI(
                             label = { Text("Phone Number") },
                             modifier = Modifier.fillMaxWidth(),
                             leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Phone,
-                                    contentDescription = "Phone Number"
-                                )
+                                Icon(Icons.Default.Phone, "Phone Number")
                             },
-                            keyboardOptions = KeyboardOptions.Default.copy(
-                                keyboardType = KeyboardType.Phone
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Phone,
+                                imeAction = ImeAction.Next
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onNext = { focusManager.moveFocus(FocusDirection.Down) }
                             ),
                             isError = phoneNumberError.isNotEmpty(),
                             supportingText = if (phoneNumberError.isNotEmpty()) {
                                 { Text(phoneNumberError) }
                             } else null
                         )
+                    }
 
-                        // Advance Payment
+                    // Payment Section
+                    FormSection(
+                        title = "Payment Details",
+                        icon = Icons.Default.Payment
+                    ) {
                         OutlinedTextField(
                             value = advancePayment,
                             onValueChange = {
@@ -163,21 +186,23 @@ class AddEditScreenUI(
                             label = { Text("Advance Payment") },
                             modifier = Modifier.fillMaxWidth(),
                             leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.AttachMoney,
-                                    contentDescription = "Advance Payment"
-                                )
+                                Icon(Icons.Default.AttachMoney, "Advance Payment")
                             },
-                            keyboardOptions = KeyboardOptions.Default.copy(
-                                keyboardType = KeyboardType.Decimal
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Decimal,
+                                imeAction = ImeAction.Next
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onNext = { focusManager.moveFocus(FocusDirection.Down) }
                             ),
                             isError = advancePaymentError.isNotEmpty(),
                             supportingText = if (advancePaymentError.isNotEmpty()) {
                                 { Text(advancePaymentError) }
-                            } else null
+                            } else {
+                                { Text("Enter the advance payment amount") }
+                            }
                         )
 
-                        // Total Payment
                         OutlinedTextField(
                             value = totalPayment,
                             onValueChange = {
@@ -187,138 +212,96 @@ class AddEditScreenUI(
                             label = { Text("Total Payment") },
                             modifier = Modifier.fillMaxWidth(),
                             leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.AttachMoney,
-                                    contentDescription = "Total Payment"
-                                )
+                                Icon(Icons.Default.AttachMoney, "Total Payment")
                             },
-                            keyboardOptions = KeyboardOptions.Default.copy(
-                                keyboardType = KeyboardType.Decimal
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Decimal,
+                                imeAction = ImeAction.Next
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onNext = { focusManager.moveFocus(FocusDirection.Down) }
                             ),
                             isError = totalPaymentError.isNotEmpty(),
                             supportingText = if (totalPaymentError.isNotEmpty()) {
                                 { Text(totalPaymentError) }
-                            } else null
+                            } else {
+                                { Text("Enter the total project value") }
+                            }
                         )
 
-                        // Description
+                        if (isEditMode) {
+                            PaymentStatusCard(
+                                advancePayment = advancePayment.toDoubleOrNull() ?: 0.0,
+                                totalPayment = totalPayment.toDoubleOrNull() ?: 0.0,
+                                isPaid = isPaid,
+                                onPaidChange = { isPaid = it }
+                            )
+                        }
+                    }
+
+                    // Description Section
+                    FormSection(
+                        title = "Additional Details",
+                        icon = Icons.Default.Description
+                    ) {
                         OutlinedTextField(
                             value = description,
                             onValueChange = { description = it },
                             label = { Text("Description (Optional)") },
                             modifier = Modifier.fillMaxWidth(),
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Description,
-                                    contentDescription = "Description"
-                                )
-                            },
                             minLines = 3,
-                            maxLines = 5
+                            maxLines = 5,
+                            keyboardOptions = KeyboardOptions(
+                                imeAction = ImeAction.Done
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onDone = { focusManager.clearFocus() }
+                            )
                         )
 
-                        // Checkbox Options
                         if (isEditMode) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Checkbox(
-                                    checked = isCompleted,
-                                    onCheckedChange = { isCompleted = it }
-                                )
-                                Text("Project Completed")
-                            }
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Checkbox(
-                                    checked = isPaid,
-                                    onCheckedChange = { isPaid = it }
-                                )
-                                Text("Payment Completed")
-                            }
+                            ProjectStatusToggle(
+                                isCompleted = isCompleted,
+                                onCompletedChange = { isCompleted = it }
+                            )
                         }
                     }
-                }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Button(
-                    onClick = {
-                        if (validateInputs(
-                                clientName,
-                                phoneNumber,
-                                advancePayment,
-                                totalPayment,
-                                { clientNameError = it },
-                                { phoneNumberError = it },
-                                { advancePaymentError = it },
-                                { totalPaymentError = it }
-                            )) {
-                            val advancePaymentValue = advancePayment.toDoubleOrNull() ?: 0.0
-                            val totalPaymentValue = totalPayment.toDoubleOrNull() ?: 0.0
-
-                            val currentDate = Date()
-
-                            val updatedProject = if (isEditMode && project != null) {
-                                project.copy(
-                                    clientName = clientName,
-                                    phoneNumber = phoneNumber,
-                                    advancePayment = advancePaymentValue,
-                                    totalPayment = totalPaymentValue,
-                                    description = description,
-                                    isCompleted = isCompleted,
-                                    isPaid = isPaid,
-                                    lastModifiedDate = currentDate
+                    // Save Button
+                    Button(
+                        onClick = {
+                            if (validateInputs(
+                                    clientName,
+                                    phoneNumber,
+                                    advancePayment,
+                                    totalPayment,
+                                    { clientNameError = it },
+                                    { phoneNumberError = it },
+                                    { advancePaymentError = it },
+                                    { totalPaymentError = it }
                                 )
-                            } else {
-                                Project(
-                                    clientName = clientName,
-                                    phoneNumber = phoneNumber,
-                                    advancePayment = advancePaymentValue,
-                                    totalPayment = totalPaymentValue,
-                                    description = description,
-                                    creationDate = currentDate,
-                                    lastModifiedDate = currentDate
+                            ) {
+                                handleSave(
+                                    isEditMode,
+                                    project,
+                                    clientName,
+                                    phoneNumber,
+                                    advancePayment,
+                                    totalPayment,
+                                    description,
+                                    isCompleted,
+                                    isPaid,
+                                    scope,
+                                    snackbarHostState,
+                                    navController
                                 )
                             }
-
-                            if (isEditMode) {
-                                viewModel.updateProject(updatedProject)
-                                scope.launch {
-                                    snackbarHostState.showSnackbar("Project updated successfully")
-                                }
-                            } else {
-                                viewModel.addProject(updatedProject)
-                                scope.launch {
-                                    snackbarHostState.showSnackbar("Project added successfully")
-                                }
-                            }
-
-                            // Navigate back after short delay to allow user to see the success message
-                            scope.launch {
-                                kotlinx.coroutines.delay(800)
-                                navController.navigateUp()
-                            }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
+                        },
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = null
-                        )
-                        Text(
-                            text = if (isEditMode) "Update Project" else "Save Project",
-                            modifier = Modifier.padding(start = 8.dp)
-                        )
+                        Icon(Icons.Default.Check, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (isEditMode) "Update Project" else "Save Project")
                     }
                 }
             }
@@ -326,19 +309,190 @@ class AddEditScreenUI(
     }
 
     @Composable
-    fun FormCard(content: @Composable () -> Unit) {
-        Card(
+    private fun FormSection(
+        title: String,
+        icon: ImageVector,
+        content: @Composable ColumnScope.() -> Unit
+    ) {
+        ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            colors = CardDefaults.cardColors(
+            colors = CardDefaults.elevatedCardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerLow
             )
         ) {
             Column(
-                modifier = Modifier.padding(16.dp)
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
                 content()
             }
+        }
+    }
+
+    @Composable
+    private fun PaymentStatusCard(
+        advancePayment: Double,
+        totalPayment: Double,
+        isPaid: Boolean,
+        onPaidChange: (Boolean) -> Unit
+    ) {
+        val progress = if (totalPayment > 0) advancePayment / totalPayment else 0.0
+
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            shape = MaterialTheme.shapes.medium
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Payment Progress",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = "${(progress * 100).toInt()}%",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                LinearProgressIndicator(
+                    progress = { progress.toFloat() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Checkbox(
+                        checked = isPaid,
+                        onCheckedChange = onPaidChange
+                    )
+                    Text("Mark as fully paid")
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun ProjectStatusToggle(
+        isCompleted: Boolean,
+        onCompletedChange: (Boolean) -> Unit
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = if (isCompleted)
+                MaterialTheme.colorScheme.primaryContainer
+            else
+                MaterialTheme.colorScheme.surfaceVariant,
+            shape = MaterialTheme.shapes.medium
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Checkbox(
+                    checked = isCompleted,
+                    onCheckedChange = onCompletedChange
+                )
+                Column {
+                    Text(
+                        text = if (isCompleted) "Project Completed" else "Mark as Complete",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = if (isCompleted)
+                            "This project has been marked as complete"
+                        else
+                            "Check this when the project is finished",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+
+    private fun handleSave(
+        isEditMode: Boolean,
+        project: Project?,
+        clientName: String,
+        phoneNumber: String,
+        advancePayment: String,
+        totalPayment: String,
+        description: String,
+        isCompleted: Boolean,
+        isPaid: Boolean,
+        scope: CoroutineScope,
+        snackbarHostState: SnackbarHostState,
+        navController: NavController
+    ) {
+        val advancePaymentValue = advancePayment.toDoubleOrNull() ?: 0.0
+        val totalPaymentValue = totalPayment.toDoubleOrNull() ?: 0.0
+        val currentDate = Date()
+
+        val updatedProject = if (isEditMode && project != null) {
+            project.copy(
+                clientName = clientName,
+                phoneNumber = phoneNumber,
+                advancePayment = advancePaymentValue,
+                totalPayment = totalPaymentValue,
+                description = description,
+                isCompleted = isCompleted,
+                isPaid = isPaid,
+                lastModifiedDate = currentDate
+            )
+        } else {
+            Project(
+                clientName = clientName,
+                phoneNumber = phoneNumber,
+                advancePayment = advancePaymentValue,
+                totalPayment = totalPaymentValue,
+                description = description,
+                creationDate = currentDate,
+                lastModifiedDate = currentDate
+            )
+        }
+
+        if (isEditMode) {
+            viewModel.updateProject(updatedProject)
+            scope.launch {
+                snackbarHostState.showSnackbar("Project updated successfully")
+            }
+        } else {
+            viewModel.addProject(updatedProject)
+            scope.launch {
+                snackbarHostState.showSnackbar("Project added successfully")
+            }
+        }
+
+        scope.launch {
+            kotlinx.coroutines.delay(800)
+            navController.navigateUp()
         }
     }
 
