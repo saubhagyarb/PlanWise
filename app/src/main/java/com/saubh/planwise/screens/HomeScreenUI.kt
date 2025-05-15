@@ -1,67 +1,42 @@
 package com.saubh.planwise.screens
 
+import android.content.Intent
+import android.content.res.Configuration
+import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Assignment
-import androidx.compose.material.icons.filled.AccountBalance
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Pending
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FabPosition
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.ScrollableTabRow
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.TopAppBarScrollBehavior
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.navigation.NavController
+import com.saubh.planwise.R
 import com.saubh.planwise.data.Project
 import com.saubh.planwise.data.ProjectFilter
 import com.saubh.planwise.data.ProjectViewModel
@@ -75,11 +50,12 @@ class HomeScreenUI(
 ) {
     @Composable
     fun HomeScreen() {
+        val orientation = LocalConfiguration.current.orientation
+        val isLandscape = orientation == Configuration.ORIENTATION_LANDSCAPE
         var selectedFilter by remember { mutableStateOf(ProjectFilter.ALL) }
         val scope = rememberCoroutineScope()
         val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
         val listState = rememberLazyListState()
-
 
         Scaffold(
             topBar = { AppTopBar(scrollBehavior) },
@@ -96,42 +72,34 @@ class HomeScreenUI(
                 }
             }
         ) { padding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .nestedScroll(scrollBehavior.nestedScrollConnection)
-            ) {
-                // Dashboard Section
-                DashboardSection(viewModel.projectList)
-
-                // Filter Section
-                FilterSection(selectedFilter, onFilterSelected = { filter ->
-                    selectedFilter = filter
-                    scope.launch {
-                        // Animate scroll to top when filter changes
-                        listState.scrollToItem(0)
-                    }
-                })
-
-                // Projects List
-                AnimatedContent(
-                    targetState = selectedFilter,
-                    transitionSpec = {
-                        fadeIn() + slideInVertically() togetherWith fadeOut()
-                    }
-                ) { filter ->
-                    ProjectList(
-                        projects = viewModel.projectList.filter {
-                            when (filter) {
-                                ProjectFilter.ALL -> true
-                                ProjectFilter.ONGOING -> !it.isCompleted
-                                ProjectFilter.COMPLETED -> it.isCompleted
-                                ProjectFilter.UNPAID -> !it.isPaid
-                            }
+            if (isLandscape) {
+                LandscapeLayout(
+                    padding = padding,
+                    selectedFilter = selectedFilter,
+                    onFilterSelected = { filter ->
+                        selectedFilter = filter
+                        scope.launch {
+                            listState.scrollToItem(0)
                         }
-                    )
-                }
+                    },
+                    projects = viewModel.projectList,
+                    listState = listState,
+                    scrollBehavior = scrollBehavior
+                )
+            } else {
+                PortraitLayout(
+                    padding = padding,
+                    selectedFilter = selectedFilter,
+                    onFilterSelected = { filter ->
+                        selectedFilter = filter
+                        scope.launch {
+                            listState.scrollToItem(0)
+                        }
+                    },
+                    projects = viewModel.projectList,
+                    listState = listState,
+                    scrollBehavior = scrollBehavior
+                )
             }
         }
     }
@@ -169,70 +137,63 @@ class HomeScreenUI(
     }
 
     @Composable
-    private fun DashboardSection(projects: List<Project>) {
-        ElevatedCard(
+    private fun LandscapeLayout(
+        padding: PaddingValues,
+        selectedFilter: ProjectFilter,
+        onFilterSelected: (ProjectFilter) -> Unit,
+        projects: List<Project>,
+        listState: LazyListState,
+        scrollBehavior: TopAppBarScrollBehavior
+    ) {
+        Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
-            )
+                .fillMaxSize()
+                .padding(padding)
+                .nestedScroll(scrollBehavior.nestedScrollConnection),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+            // Left panel with dashboard
+            Box(
+                modifier = Modifier
+                    .weight(0.45f)
+                    .fillMaxHeight()
+                    .padding(start = 16.dp, top = 8.dp, bottom = 8.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    DashboardItem(
-                        icon = Icons.AutoMirrored.Filled.Assignment,
-                        label = "Total Projects",
-                        value = projects.size.toString()
-                    )
-                    DashboardItem(
-                        icon = Icons.Default.Pending,
-                        label = "Ongoing",
-                        value = projects.count { !it.isCompleted }.toString()
-                    )
-                    DashboardItem(
-                        icon = Icons.Default.AccountBalance,
-                        label = "Total Value",
-                        value = viewModel.formatCurrency(projects.sumOf { it.totalPayment })
+                DashboardSection(
+                    projects = projects,
+                    isLandscape = true
+                )
+            }
+
+            // Right panel with filters and projects list
+            Column(
+                modifier = Modifier
+                    .weight(0.55f)
+                    .fillMaxHeight()
+                    .padding(end = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Filter chips at the top
+                FilterSection(
+                    selectedFilter = selectedFilter,
+                    onFilterSelected = onFilterSelected
+                )
+
+                // Projects list below
+                Box(modifier = Modifier.weight(1f)) {
+                    ProjectList(
+                        projects = projects.filter {
+                            when (selectedFilter) {
+                                ProjectFilter.ALL -> true
+                                ProjectFilter.ONGOING -> !it.isCompleted
+                                ProjectFilter.COMPLETED -> it.isCompleted
+                                ProjectFilter.UNPAID -> !it.isPaid
+                            }
+                        },
+                        listState = listState
                     )
                 }
             }
-        }
-    }
-
-    @Composable
-    private fun DashboardItem(
-        icon: ImageVector,
-        label: String,
-        value: String
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.size(24.dp)
-            )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-            )
         }
     }
 
@@ -279,13 +240,209 @@ class HomeScreenUI(
         }
     }
 
-    @OptIn(ExperimentalMaterial3Api::class)
+
     @Composable
-    private fun ProjectList(projects: List<Project>) {
+    private fun DashboardSection(
+        projects: List<Project>,
+        isLandscape: Boolean = false
+    ) {
+        ElevatedCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = if (isLandscape) 0.dp else 8.dp),
+            colors = CardDefaults.elevatedCardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Stats row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    CompactStatCard(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.AutoMirrored.Filled.Assignment,
+                        value = projects.size.toString(),
+                        label = "Total",
+                        backgroundColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    CompactStatCard(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.Pending,
+                        value = projects.count { !it.isCompleted }.toString(),
+                        label = "Ongoing",
+                        backgroundColor = MaterialTheme.colorScheme.tertiaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                }
+
+                // Finance row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    CompactFinanceInfo(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.AccountBalance,
+                        label = "Total Amount",
+                        value = formatAmountAbbreviated(projects.sumOf { it.totalPayment })
+                    )
+                    CompactFinanceInfo(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.Check,
+                        label = "Received",
+                        value = formatAmountAbbreviated(projects.sumOf { it.advancePayment })
+                    )
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun CompactStatCard(
+        modifier: Modifier = Modifier,
+        icon: ImageVector,
+        value: String,
+        label: String,
+        backgroundColor: Color,
+        contentColor: Color
+    ) {
+        Surface(
+            modifier = modifier,
+            color = backgroundColor,
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = contentColor,
+                    modifier = Modifier.size(24.dp)
+                )
+                Column {
+                    Text(
+                        text = value,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = contentColor,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = contentColor.copy(alpha = 0.8f)
+                    )
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun CompactFinanceInfo(
+        modifier: Modifier = Modifier,
+        icon: ImageVector,
+        label: String,
+        value: String
+    ) {
+        Row(
+            modifier = modifier,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Column {
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+    private fun formatAmountAbbreviated(amount: Double): String {
+        return when {
+            amount >= 1_00_00_000 -> String.format(locale = null,"%.1fCr", amount / 1_00_00_000)
+            amount >= 1_00_000 -> String.format(locale = null, "%.1fL", amount / 1_00_000)
+            amount >= 1000 -> String.format(locale = null, "%.1fK", amount / 1000)
+            else -> String.format(locale = null, "%.0f", amount)
+        }
+    }
+
+    @Composable
+    private fun PortraitLayout(
+        padding: PaddingValues,
+        selectedFilter: ProjectFilter,
+        onFilterSelected: (ProjectFilter) -> Unit,
+        projects: List<Project>,
+        listState: LazyListState,
+        scrollBehavior: TopAppBarScrollBehavior
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .nestedScroll(scrollBehavior.nestedScrollConnection)
+        ) {
+            DashboardSection(projects)
+            FilterSection(selectedFilter, onFilterSelected)
+            AnimatedContent(
+                targetState = selectedFilter,
+                transitionSpec = {
+                    fadeIn() + slideInVertically() togetherWith fadeOut()
+                }
+            ) { filter ->
+                ProjectList(
+                    projects = projects.filter {
+                        when (filter) {
+                            ProjectFilter.ALL -> true
+                            ProjectFilter.ONGOING -> !it.isCompleted
+                            ProjectFilter.COMPLETED -> it.isCompleted
+                            ProjectFilter.UNPAID -> !it.isPaid
+                        }
+                    },
+                    listState = listState
+                )
+            }
+        }
+    }
+
+    @Composable
+    private fun ProjectList(
+        projects: List<Project>,
+        listState: LazyListState
+    ) {
         if (projects.isEmpty()) {
             EmptyStateMessage()
         } else {
             LazyColumn(
+                state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -299,12 +456,44 @@ class HomeScreenUI(
             }
         }
     }
+    @Composable
+    private fun EmptyStateMessage() {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Assignment,
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "No projects found",
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Text(
+                    text = "Tap the + button to add your first project",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun ProjectCard(project: Project) {
+        val context = LocalContext.current
         Card(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .shadow(2.dp, RoundedCornerShape(16.dp)),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerLow
@@ -317,9 +506,23 @@ class HomeScreenUI(
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Avatar section
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = project.clientName.take(2).uppercase(),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = project.clientName,
@@ -328,33 +531,122 @@ class HomeScreenUI(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                        Text(
-                            text = viewModel.formatRelativeDate(project.creationDate),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = viewModel.formatRelativeDate(project.creationDate),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "•",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "${(project.paymentProgress * 100).toInt()}% paid",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.tertiary
+                            )
+                        }
+                    }
+                    // Contact Actions
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        IconButton(
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_DIAL).apply {
+                                    data = "tel:${project.phoneNumber}".toUri()
+                                }
+                                try {
+                                    ContextCompat.startActivity(context, intent, null)
+                                } catch (_: Exception) {
+                                    Toast.makeText(context, "Unable to make call", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Call,
+                                contentDescription = "Call",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        IconButton(
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_VIEW).apply {
+                                    data = "https://api.whatsapp.com/send?phone=${
+                                        project.phoneNumber.replace("+", "")
+                                    }".toUri()
+                                }
+                                try {
+                                    ContextCompat.startActivity(context, intent, null)
+                                } catch (_: Exception) {
+                                    Toast.makeText(context, "WhatsApp not installed", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.whatsapp),
+                                contentDescription = "WhatsApp",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+                }
+
+                // Description section
+                if (project.description.isNotBlank()) {
+                    Text(
+                        text = project.description.take(80) + if (project.description.length > 80) "..." else "",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                HorizontalDivider()
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Box(modifier = Modifier.weight(0.6f)) {
+                        PaymentProgressBar(
+                            progress = project.paymentProgress,
+                            showLabel = false,
+                            isPaid = project.isPaid
                         )
                     }
 
+                    Spacer(modifier = Modifier.width(8.dp))
+
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(0.4f),
+                        horizontalArrangement = Arrangement.End
                     ) {
                         if (project.isCompleted) {
                             Surface(
                                 color = MaterialTheme.colorScheme.primaryContainer,
-                                shape = RoundedCornerShape(12.dp)
+                                shape = RoundedCornerShape(8.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = "Completed",
                                     tint = MaterialTheme.colorScheme.onPrimaryContainer,
                                     modifier = Modifier
-                                        .size(20.dp)
-                                        .padding(4.dp)
+                                        .size(16.dp)
+                                        .padding(2.dp)
                                 )
                             }
+                            Spacer(Modifier.width(6.dp))
                         }
-
                         Text(
                             text = viewModel.formatCurrency(project.totalPayment),
                             style = MaterialTheme.typography.titleSmall,
@@ -363,12 +655,6 @@ class HomeScreenUI(
                         )
                     }
                 }
-
-                PaymentProgressBar(
-                    progress = project.paymentProgress,
-                    showLabel = true,
-                    isPaid = project.isPaid
-                )
             }
         }
     }
@@ -409,36 +695,6 @@ class HomeScreenUI(
                 else
                     MaterialTheme.colorScheme.tertiary
             )
-        }
-    }
-
-
-    @Composable
-    private fun EmptyStateMessage() {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Assignment,
-                    contentDescription = null,
-                    modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = "No projects found",
-                    style = MaterialTheme.typography.titleLarge
-                )
-                Text(
-                    text = "Tap the + button to add your first project",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
     }
 }
