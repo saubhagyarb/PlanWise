@@ -1,5 +1,6 @@
 package com.saubh.planwise.screens
 
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
@@ -15,8 +16,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -56,6 +59,8 @@ class AddEditScreenUI(
         var totalPaymentError by remember { mutableStateOf("") }
 
         val focusManager = LocalFocusManager.current
+        val orientation = LocalConfiguration.current.orientation
+        val isLandscape = orientation == Configuration.ORIENTATION_LANDSCAPE
 
         Scaffold(
             modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -99,27 +104,227 @@ class AddEditScreenUI(
                             }
                         }
                     },
-                    scrollBehavior = scrollBehavior,
-                    colors = TopAppBarDefaults.largeTopAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    )
+                    scrollBehavior = scrollBehavior
                 )
             },
             snackbarHost = { SnackbarHost(snackbarHostState) }
-        ) { innerPadding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .verticalScroll(rememberScrollState())
-            ) {
+        ) { padding ->
+            if (isLandscape) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Left Column
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Basic Information Section
+                        FormSection(
+                            title = "Basic Information",
+                            icon = Icons.Default.Info,
+                            isLandscape = true
+                        ) {
+                            OutlinedTextField(
+                                value = clientName,
+                                onValueChange = {
+                                    clientName = it
+                                    clientNameError = ""
+                                },
+                                label = { Text("Client Name") },
+                                modifier = Modifier.fillMaxWidth(),
+                                leadingIcon = { Icon(Icons.Default.Person, null) },
+                                keyboardOptions = KeyboardOptions(
+                                    capitalization = KeyboardCapitalization.Words,
+                                    imeAction = ImeAction.Next
+                                ),
+                                keyboardActions = KeyboardActions(
+                                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                                ),
+                                isError = clientNameError.isNotEmpty(),
+                                supportingText = if (clientNameError.isNotEmpty()) {
+                                    { Text(clientNameError) }
+                                } else null
+                            )
+
+                            OutlinedTextField(
+                                value = phoneNumber,
+                                onValueChange = {
+                                    phoneNumber = it
+                                    phoneNumberError = ""
+                                },
+                                label = { Text("Phone Number") },
+                                modifier = Modifier.fillMaxWidth(),
+                                leadingIcon = { Icon(Icons.Default.Phone, null) },
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Phone,
+                                    imeAction = ImeAction.Next
+                                ),
+                                keyboardActions = KeyboardActions(
+                                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                                ),
+                                isError = phoneNumberError.isNotEmpty(),
+                                supportingText = if (phoneNumberError.isNotEmpty()) {
+                                    { Text(phoneNumberError) }
+                                } else null
+                            )
+                        }
+
+                        // Description Section
+                        FormSection(
+                            title = "Additional Details",
+                            icon = Icons.Default.Description,
+                            isLandscape = true
+                        ) {
+                            OutlinedTextField(
+                                value = description,
+                                onValueChange = { description = it },
+                                label = { Text("Description (Optional)") },
+                                modifier = Modifier.fillMaxWidth(),
+                                minLines = 3,
+                                maxLines = 5,
+                                keyboardOptions = KeyboardOptions(
+                                    capitalization = KeyboardCapitalization.Sentences,
+                                    autoCorrectEnabled = true,
+                                    imeAction = ImeAction.Done
+                                ),
+                                keyboardActions = KeyboardActions(
+                                    onDone = { focusManager.clearFocus() }
+                                )
+                            )
+
+                            if (isEditMode) {
+                                ProjectStatusToggle(
+                                    isCompleted = isCompleted,
+                                    onCompletedChange = { isCompleted = it }
+                                )
+                            }
+                        }
+                    }
+
+                    // Right Column
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Payment Section
+                        FormSection(
+                            title = "Payment Details",
+                            icon = Icons.Default.Payment,
+                            isLandscape = true
+                        ) {
+                            OutlinedTextField(
+                                value = totalPayment,
+                                onValueChange = {
+                                    totalPayment = it
+                                    totalPaymentError = ""
+                                },
+                                label = { Text("Total Payment") },
+                                modifier = Modifier.fillMaxWidth(),
+                                leadingIcon = { Icon(Icons.Default.CurrencyRupee, null) },
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Decimal,
+                                    imeAction = ImeAction.Next
+                                ),
+                                keyboardActions = KeyboardActions(
+                                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                                ),
+                                isError = totalPaymentError.isNotEmpty(),
+                                supportingText = if (totalPaymentError.isNotEmpty()) {
+                                    { Text(totalPaymentError) }
+                                } else {
+                                    { Text("Enter the total project value") }
+                                }
+                            )
+
+                            OutlinedTextField(
+                                value = advancePayment,
+                                onValueChange = {
+                                    advancePayment = it
+                                    advancePaymentError = ""
+                                },
+                                label = { Text("Advance Payment") },
+                                modifier = Modifier.fillMaxWidth(),
+                                leadingIcon = { Icon(Icons.Default.CurrencyRupee, null) },
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Decimal,
+                                    imeAction = ImeAction.Next
+                                ),
+                                keyboardActions = KeyboardActions(
+                                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                                ),
+                                isError = advancePaymentError.isNotEmpty(),
+                                supportingText = if (advancePaymentError.isNotEmpty()) {
+                                    { Text(advancePaymentError) }
+                                } else {
+                                    { Text("Enter the advance payment amount") }
+                                }
+                            )
+
+                            if (isEditMode) {
+                                PaymentStatusCard(
+                                    advancePayment = advancePayment.toDoubleOrNull() ?: 0.0,
+                                    totalPayment = totalPayment.toDoubleOrNull() ?: 0.0
+                                )
+                            }
+                        }
+
+                        // Save Button
+                        Button(
+                            onClick = {
+                                if (validateInputs(
+                                        clientName,
+                                        phoneNumber,
+                                        advancePayment,
+                                        totalPayment,
+                                        { clientNameError = it },
+                                        { phoneNumberError = it },
+                                        { advancePaymentError = it },
+                                        { totalPaymentError = it }
+                                    )
+                                ) {
+                                    handleSave(
+                                        isEditMode,
+                                        project,
+                                        clientName,
+                                        phoneNumber,
+                                        advancePayment,
+                                        totalPayment,
+                                        description,
+                                        isCompleted,
+                                        isPaid,
+                                        scope,
+                                        snackbarHostState,
+                                        navController
+                                    )
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Check, null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(if (isEditMode) "Update Project" else "Save Project")
+                        }
+                    }
+                }
+            } else {
+                // Portrait layout (existing code)
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .fillMaxSize()
+                        .padding(padding)
+                        .verticalScroll(rememberScrollState())
                         .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(24.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Basic Information Section
+                    // ... existing layout code ...
                     FormSection(
                         title = "Basic Information",
                         icon = Icons.Default.Info
@@ -130,12 +335,13 @@ class AddEditScreenUI(
                                 clientName = it
                                 clientNameError = ""
                             },
-                            label = { Text("Project Name") },
+                            label = { Text("Client Name") },
                             modifier = Modifier.fillMaxWidth(),
                             leadingIcon = {
-                                Icon(Icons.Default.Person, "Project Name")
+                                Icon(Icons.Default.Person, "Client Name")
                             },
                             keyboardOptions = KeyboardOptions(
+                                capitalization = KeyboardCapitalization.Words,
                                 imeAction = ImeAction.Next
                             ),
                             keyboardActions = KeyboardActions(
@@ -178,32 +384,6 @@ class AddEditScreenUI(
                         icon = Icons.Default.Payment
                     ) {
                         OutlinedTextField(
-                            value = advancePayment,
-                            onValueChange = {
-                                advancePayment = it
-                                advancePaymentError = ""
-                            },
-                            label = { Text("Advance Payment") },
-                            modifier = Modifier.fillMaxWidth(),
-                            leadingIcon = {
-                                Icon(Icons.Default.AttachMoney, "Advance Payment")
-                            },
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Decimal,
-                                imeAction = ImeAction.Next
-                            ),
-                            keyboardActions = KeyboardActions(
-                                onNext = { focusManager.moveFocus(FocusDirection.Down) }
-                            ),
-                            isError = advancePaymentError.isNotEmpty(),
-                            supportingText = if (advancePaymentError.isNotEmpty()) {
-                                { Text(advancePaymentError) }
-                            } else {
-                                { Text("Enter the advance payment amount") }
-                            }
-                        )
-
-                        OutlinedTextField(
                             value = totalPayment,
                             onValueChange = {
                                 totalPayment = it
@@ -212,7 +392,7 @@ class AddEditScreenUI(
                             label = { Text("Total Payment") },
                             modifier = Modifier.fillMaxWidth(),
                             leadingIcon = {
-                                Icon(Icons.Default.AttachMoney, "Total Payment")
+                                Icon(Icons.Default.CurrencyRupee, "Total Payment")
                             },
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Decimal,
@@ -229,12 +409,36 @@ class AddEditScreenUI(
                             }
                         )
 
+                        OutlinedTextField(
+                            value = advancePayment,
+                            onValueChange = {
+                                advancePayment = it
+                                advancePaymentError = ""
+                            },
+                            label = { Text("Advance Payment") },
+                            modifier = Modifier.fillMaxWidth(),
+                            leadingIcon = {
+                                Icon(Icons.Default.CurrencyRupee, "Advance Payment")
+                            },
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Decimal,
+                                imeAction = ImeAction.Next
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                            ),
+                            isError = advancePaymentError.isNotEmpty(),
+                            supportingText = if (advancePaymentError.isNotEmpty()) {
+                                { Text(advancePaymentError) }
+                            } else {
+                                { Text("Enter the advance payment amount") }
+                            }
+                        )
+
                         if (isEditMode) {
                             PaymentStatusCard(
                                 advancePayment = advancePayment.toDoubleOrNull() ?: 0.0,
-                                totalPayment = totalPayment.toDoubleOrNull() ?: 0.0,
-                                isPaid = isPaid,
-                                onPaidChange = { isPaid = it }
+                                totalPayment = totalPayment.toDoubleOrNull() ?: 0.0
                             )
                         }
                     }
@@ -251,7 +455,9 @@ class AddEditScreenUI(
                             modifier = Modifier.fillMaxWidth(),
                             minLines = 3,
                             maxLines = 5,
-                            keyboardOptions = KeyboardOptions(
+                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences,
+                                autoCorrectEnabled = true,
+                                keyboardType = KeyboardType.Text,
                                 imeAction = ImeAction.Done
                             ),
                             keyboardActions = KeyboardActions(
@@ -309,95 +515,6 @@ class AddEditScreenUI(
     }
 
     @Composable
-    private fun FormSection(
-        title: String,
-        icon: ImageVector,
-        content: @Composable ColumnScope.() -> Unit
-    ) {
-        ElevatedCard(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-            )
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
-                content()
-            }
-        }
-    }
-
-    @Composable
-    private fun PaymentStatusCard(
-        advancePayment: Double,
-        totalPayment: Double,
-        isPaid: Boolean,
-        onPaidChange: (Boolean) -> Unit
-    ) {
-        val progress = if (totalPayment > 0) advancePayment / totalPayment else 0.0
-
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = MaterialTheme.colorScheme.secondaryContainer,
-            shape = MaterialTheme.shapes.medium
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Payment Progress",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Text(
-                        text = "${(progress * 100).toInt()}%",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-
-                LinearProgressIndicator(
-                    progress = { progress.toFloat() },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(8.dp)
-                )
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Checkbox(
-                        checked = isPaid,
-                        onCheckedChange = onPaidChange
-                    )
-                    Text("Mark as fully paid")
-                }
-            }
-        }
-    }
-
-    @Composable
     private fun ProjectStatusToggle(
         isCompleted: Boolean,
         onCompletedChange: (Boolean) -> Unit
@@ -436,6 +553,87 @@ class AddEditScreenUI(
             }
         }
     }
+
+    @Composable
+    private fun PaymentStatusCard(
+        advancePayment: Double,
+        totalPayment: Double
+    ) {
+        val progress = if (totalPayment > 0) advancePayment / totalPayment else 0.0
+
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            shape = MaterialTheme.shapes.medium
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Payment Progress",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = "${(progress * 100).toInt()}%",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                LinearProgressIndicator(
+                    progress = { progress.toFloat() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                )
+            }
+        }
+    }
+
+    @Composable
+    private fun FormSection(
+        title: String,
+        icon: ImageVector,
+        isLandscape: Boolean = false,
+        content: @Composable ColumnScope.() -> Unit
+    ) {
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.elevatedCardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(
+                    horizontal = 16.dp,
+                    vertical = if (isLandscape) 12.dp else 16.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(if (isLandscape) 12.dp else 16.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+                content()
+            }
+        }
+    }
+
 
     private fun handleSave(
         isEditMode: Boolean,
