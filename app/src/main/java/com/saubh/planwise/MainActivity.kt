@@ -8,20 +8,21 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import com.saubh.planwise.data.ProjectViewModel
 import com.saubh.planwise.navigation.AppNavigation
 import com.saubh.planwise.ui.theme.PlanWiseTheme
 
 class MainActivity : ComponentActivity() {
-    lateinit var viewModel: ProjectViewModel
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
-        viewModel = ProjectViewModel(application)
 
         setContent {
             PlanWiseTheme {
@@ -29,7 +30,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AppNavigation(viewModel = viewModel)
+                    AppNavigation(viewModel = rememberSaveable { ProjectViewModel() })
                 }
             }
         }
