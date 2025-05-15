@@ -1,5 +1,8 @@
 package com.saubh.planwise.screens
 
+import android.content.Intent
+import android.content.res.Configuration
+import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
@@ -15,6 +18,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,9 +32,9 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -59,16 +63,23 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.navigation.NavController
+import com.saubh.planwise.R
 import com.saubh.planwise.data.Project
 import com.saubh.planwise.data.ProjectViewModel
 import com.saubh.planwise.navigation.Routes
 import java.text.NumberFormat
+
 @OptIn(ExperimentalMaterial3Api::class)
 class SearchScreenUI(
     private val viewModel: ProjectViewModel,
@@ -80,6 +91,8 @@ class SearchScreenUI(
         var isSearchFocused by remember { mutableStateOf(false) }
         val focusManager = LocalFocusManager.current
         val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+        val orientation = LocalConfiguration.current.orientation
+        val isLandscape = orientation == Configuration.ORIENTATION_LANDSCAPE
 
         Scaffold(
             modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -92,7 +105,7 @@ class SearchScreenUI(
                                 style = MaterialTheme.typography.headlineMedium
                             )
                             AnimatedVisibility(
-                                visible = !isSearchFocused,
+                                visible = !isSearchFocused && !isLandscape,
                                 enter = fadeIn() + expandVertically(),
                                 exit = fadeOut() + shrinkVertically()
                             ) {
@@ -117,47 +130,86 @@ class SearchScreenUI(
                 )
             }
         ) { padding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                SearchBar(
-                    query = searchQuery,
-                    onQueryChange = { searchQuery = it },
-                    onClearQuery = { searchQuery = "" },
-                    onFocusChange = { isSearchFocused = it },
-                    focusManager = focusManager
-                )
+            if (isLandscape) {
+                // Landscape layout
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Left column with search bar and instructions
+                        Column(
+                            modifier = Modifier
+                                .weight(0.4f)
+                                .fillMaxHeight(),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            SearchBar(
+                                query = searchQuery,
+                                onQueryChange = { searchQuery = it },
+                                onClearQuery = { searchQuery = "" },
+                                onFocusChange = { isSearchFocused = it },
+                                focusManager = focusManager
+                            )
+                        }
 
-                AnimatedContent(
-                    targetState = searchQuery.isEmpty(),
-                    label = "search_content"
-                ) { isEmpty ->
-                    when {
-                        isEmpty -> EmptySearchState()
-                        else -> SearchResults(searchQuery)
+                        // Right column with search results
+                        Box(
+                            modifier = Modifier
+                                .weight(0.6f)
+                                .fillMaxHeight()
+                        ) {
+                            AnimatedContent(
+                                targetState = searchQuery.isEmpty(),
+                                label = "search_content"
+                            ) { isEmpty ->
+                                when {
+                                    isEmpty -> EmptySearchState() // Empty box when no search
+                                    else -> SearchResults(searchQuery)
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Portrait layout
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    SearchBar(
+                        query = searchQuery,
+                        onQueryChange = { searchQuery = it },
+                        onClearQuery = { searchQuery = "" },
+                        onFocusChange = { isSearchFocused = it },
+                        focusManager = focusManager
+                    )
+
+                    AnimatedContent(
+                        targetState = searchQuery.isEmpty(),
+                        label = "search_content"
+                    ) { isEmpty ->
+                        when {
+                            isEmpty -> EmptySearchState()
+                            else -> SearchResults(searchQuery)
+                        }
                     }
                 }
             }
         }
     }
 
-    @Composable
-    fun NoResultsFound() {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "No matching projects found",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
     @Composable
     fun SearchResults(searchQuery: String) {
         val filteredProjects = viewModel.projectList.filter { project ->
@@ -178,7 +230,19 @@ class SearchScreenUI(
         }
     }
 
-
+    @Composable
+    fun NoResultsFound() {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "No matching projects found",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
@@ -198,7 +262,7 @@ class SearchScreenUI(
 
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
+            shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             tonalElevation = 2.dp
         ) {
@@ -235,7 +299,7 @@ class SearchScreenUI(
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
-                shape = MaterialTheme.shapes.large,
+                shape = RoundedCornerShape(24.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     unfocusedBorderColor = Color.Transparent,
                     focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
@@ -274,11 +338,13 @@ class SearchScreenUI(
         }
     }
 
-    // Keep existing NoResultsFound() and SearchResults() functions
-
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     private fun ProjectCardCompact(project: Project) {
+        val context = LocalContext.current
+        val isLandscape =
+            LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -289,50 +355,100 @@ class SearchScreenUI(
             ),
             onClick = { navController.navigate(Routes.projectDetailRoute(project.id)) }
         ) {
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(if (isLandscape) 12.dp else 16.dp),
+                verticalArrangement = Arrangement.spacedBy(if (isLandscape) 8.dp else 12.dp)
             ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = project.clientName,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false)
-                        )
+                    Text(
+                        text = project.clientName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    ProjectStatusChip(project)
+                }
 
-                        ProjectStatusChip(project)
-                    }
-
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     Text(
                         text = project.phoneNumber,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f)
                     )
 
-                    PaymentProgressBar(project)
-                }
+                    // Contact buttons
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        IconButton(
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_DIAL).apply {
+                                    data = "tel:${project.phoneNumber}".toUri()
+                                }
+                                try {
+                                    ContextCompat.startActivity(context, intent, null)
+                                } catch (_: Exception) {
+                                    Toast.makeText(
+                                        context,
+                                        "Unable to make call",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            },
+                            colors = IconButtonDefaults.iconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer
+                            ),
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Call,
+                                contentDescription = "Call",
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
 
-                IconButton(
-                    onClick = { navController.navigate(Routes.editProjectRoute(project.id)) },
-                    colors = IconButtonDefaults.iconButtonColors(
-                        contentColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Icon(Icons.Default.Edit, "Edit Project")
+                        IconButton(
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_VIEW).apply {
+                                    data = "https://api.whatsapp.com/send?phone=${
+                                        project.phoneNumber.replace("+", "")
+                                    }".toUri()
+                                }
+                                try {
+                                    ContextCompat.startActivity(context, intent, null)
+                                } catch (_: Exception) {
+                                    Toast.makeText(
+                                        context,
+                                        "WhatsApp not installed",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            },
+                            colors = IconButtonDefaults.iconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer
+                            ),
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.whatsapp),
+                                contentDescription = "WhatsApp",
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
                 }
+                PaymentProgressBar(project)
             }
         }
     }
@@ -406,3 +522,6 @@ class SearchScreenUI(
         }
     }
 }
+
+
+// Keep all other existing composables and functions exactly as they are
