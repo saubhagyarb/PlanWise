@@ -1,5 +1,6 @@
 package com.saubh.planwise.screens
 
+import android.content.res.Configuration
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandHorizontally
@@ -38,7 +39,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -60,6 +60,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -76,6 +77,7 @@ class ProjectDetailScreenUI(
     private val viewModel: ProjectViewModel,
     private val navController: NavController
 ) {
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun ProjectDetailScreen(projectId: Long) {
         val project = viewModel.projectList.find { it.id == projectId }
@@ -83,6 +85,8 @@ class ProjectDetailScreenUI(
         val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
         val snackbarHostState = remember { SnackbarHostState() }
         val scope = rememberCoroutineScope()
+        val orientation = LocalConfiguration.current.orientation
+        val isLandscape = orientation == Configuration.ORIENTATION_LANDSCAPE
 
         if (project == null) {
             ProjectNotFound()
@@ -96,11 +100,9 @@ class ProjectDetailScreenUI(
                         Column {
                             Text(
                                 text = project.clientName,
-                                style = MaterialTheme.typography.headlineSmall,                            )
-                            AnimatedContent(
-                                targetState = project.isCompleted,
-                                label = "status"
-                            ) { isCompleted ->
+                                style = MaterialTheme.typography.headlineSmall
+                            )
+                            AnimatedContent(targetState = project.isCompleted, label = "status") { isCompleted ->
                                 Surface(
                                     color = if (isCompleted)
                                         MaterialTheme.colorScheme.primaryContainer
@@ -139,11 +141,7 @@ class ProjectDetailScreenUI(
                             }
                         }
                         IconButton(onClick = { showDeleteDialog = true }) {
-                            Icon(
-                                Icons.Default.Delete,
-                                "Delete",
-                                tint = MaterialTheme.colorScheme.error
-                            )
+                            Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error)
                         }
                     },
                     scrollBehavior = scrollBehavior,
@@ -155,42 +153,89 @@ class ProjectDetailScreenUI(
             },
             snackbarHost = { SnackbarHost(snackbarHostState) }
         ) { padding ->
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .nestedScroll(scrollBehavior.nestedScrollConnection),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(bottom = 32.dp)
-            ) {
-                item {
-                    QuickStatsBar(project)
-                }
-
-                item {
-                    PaymentSummaryCard(project)
-                }
-
-                item {
-                    Column(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+            if (isLandscape) {
+                // Landscape Layout
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Left Column
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(1f)
+                            .nestedScroll(scrollBehavior.nestedScrollConnection),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        contentPadding = PaddingValues(vertical = 16.dp)
                     ) {
-                        ClientInfoCard(project)
-                        PaymentDetailsCard(project)
-                        ProjectStatusCard(project) { updatedProject ->
-                            viewModel.updateProject(updatedProject)
-                            scope.launch {
-                                snackbarHostState.showSnackbar(
-                                    message = "Project status updated",
-                                    withDismissAction = true
-                                )
+                        item { QuickStatsBar(project) }
+                        item { PaymentSummaryCard(project) }
+                        item { ClientInfoCard(project) }
+                    }
+
+                    // Right Column
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(1f)
+                            .nestedScroll(scrollBehavior.nestedScrollConnection),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        contentPadding = PaddingValues(vertical = 16.dp)
+                    ) {
+                        item { PaymentDetailsCard(project) }
+                        item {
+                            ProjectStatusCard(project) { updatedProject ->
+                                viewModel.updateProject(updatedProject)
+                                scope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        message = "Project status updated",
+                                        withDismissAction = true
+                                    )
+                                }
                             }
                         }
-                        if (project.description.isNotEmpty()) {
-                            ProjectDescriptionCard(project)
+                        item {
+                            if (project.description.isNotEmpty()) {
+                                ProjectDescriptionCard(project)
+                            }
                         }
-                        ProjectTimelineCard(project)
+                        item { ProjectTimelineCard(project) }
+                    }
+                }
+            } else {
+                // Portrait Layout
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .nestedScroll(scrollBehavior.nestedScrollConnection),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(bottom = 32.dp)
+                ) {
+                    item { QuickStatsBar(project) }
+                    item { PaymentSummaryCard(project) }
+                    item {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            ClientInfoCard(project)
+                            PaymentDetailsCard(project)
+                            ProjectStatusCard(project) { updatedProject ->
+                                viewModel.updateProject(updatedProject)
+                                scope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        message = "Project status updated",
+                                        withDismissAction = true
+                                    )
+                                }
+                            }
+                            if (project.description.isNotEmpty()) {
+                                ProjectDescriptionCard(project)
+                            }
+                            ProjectTimelineCard(project)
+                        }
                     }
                 }
             }
@@ -207,6 +252,26 @@ class ProjectDetailScreenUI(
         }
     }
 
+    @Composable
+    fun ProjectNotFound() {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "Project not found",
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Button(onClick = { navController.navigateUp() }) {
+                    Text("Go Back")
+                }
+            }
+        }
+    }
     @Composable
     fun QuickStatsBar(project: Project) {
         Surface(
@@ -244,7 +309,6 @@ class ProjectDetailScreenUI(
             }
         }
     }
-
     @Composable
     fun PaymentSummaryCard(project: Project) {
         Card(
@@ -346,28 +410,6 @@ class ProjectDetailScreenUI(
             }
         )
     }
-
-    @Composable
-    fun ProjectNotFound() {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Text(
-                    text = "Project not found",
-                    style = MaterialTheme.typography.titleLarge
-                )
-                Button(onClick = { navController.navigateUp() }) {
-                    Text("Go Back")
-                }
-            }
-        }
-    }
-
     @Composable
     fun TimelineRow(label: String, date: Date) {
         Row(
@@ -553,6 +595,8 @@ class ProjectDetailScreenUI(
         project: Project,
         onProjectUpdate: (Project) -> Unit
     ) {
+        var showPaidConfirmDialog by remember { mutableStateOf(false) }
+
         DetailCard(title = "Project Status") {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 StatusToggleRow(
@@ -566,9 +610,41 @@ class ProjectDetailScreenUI(
                     label = "Mark as Paid",
                     isChecked = project.isPaid
                 ) { isPaid ->
-                    onProjectUpdate(project.copy(isPaid = isPaid))
+                    if (isPaid) {
+                        showPaidConfirmDialog = true
+                    } else {
+                        onProjectUpdate(project.copy(isPaid = false))
+                    }
                 }
             }
+        }
+
+        if (showPaidConfirmDialog) {
+            AlertDialog(
+                onDismissRequest = { showPaidConfirmDialog = false },
+                title = { Text("Mark as Paid?") },
+                text = {
+                    Text("This will set the advance payment equal to total payment. Continue?")
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            onProjectUpdate(project.copy(
+                                isPaid = true,
+                                advancePayment = project.totalPayment
+                            ))
+                            showPaidConfirmDialog = false
+                        }
+                    ) {
+                        Text("Confirm")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showPaidConfirmDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
     }
 
@@ -592,4 +668,5 @@ class ProjectDetailScreenUI(
             }
         }
     }
+
 }
