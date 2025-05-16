@@ -15,6 +15,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         viewModel = ProjectViewModel(application)
+        //
 
         setContent {
             PlanWiseTheme {
