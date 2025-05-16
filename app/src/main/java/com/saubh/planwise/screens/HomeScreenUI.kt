@@ -1,8 +1,12 @@
 package com.saubh.planwise.screens
 
+import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -42,6 +46,9 @@ import com.saubh.planwise.data.ProjectFilter
 import com.saubh.planwise.data.ProjectViewModel
 import com.saubh.planwise.navigation.Routes
 import kotlinx.coroutines.launch
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
 class HomeScreenUI(
@@ -57,7 +64,10 @@ class HomeScreenUI(
         val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
         val listState = rememberLazyListState()
 
+
+
         Scaffold(
+            modifier = Modifier.fillMaxSize(),
             topBar = { AppTopBar(scrollBehavior) },
             floatingActionButtonPosition = FabPosition.End,
             floatingActionButton = {
@@ -107,6 +117,23 @@ class HomeScreenUI(
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     private fun AppTopBar(scrollBehavior: TopAppBarScrollBehavior) {
+        val context = LocalContext.current
+        var showMenu by remember { mutableStateOf(false) }
+
+        // File picker launcher for import
+        val importLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.GetContent()
+        ) { uri: Uri? ->
+            uri?.let { importProjectsFromCsv(context, it) }
+        }
+
+        // Create file picker launcher for export
+        val exportLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.CreateDocument("text/csv")
+        ) { uri: Uri? ->
+            uri?.let { exportProjectsToCsv(context, viewModel.projectList, it) }
+        }
+
         TopAppBar(
             title = {
                 Column {
@@ -126,6 +153,38 @@ class HomeScreenUI(
                     onClick = { navController.navigate(Routes.SEARCH) }
                 ) {
                     Icon(Icons.Default.Search, "Search")
+                }
+                Box {
+                    IconButton(onClick = { showMenu = !showMenu }) {
+                        Icon(Icons.Default.MoreVert, "More options")
+                    }
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.padding(4.dp)
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Export to File") },
+                            onClick = {
+                                exportLauncher.launch("projects_${System.currentTimeMillis()}.csv")
+                                showMenu = false
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.Upload, "Export")
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Import from File") },
+                            onClick = {
+                                importLauncher.launch("*/*")
+                                showMenu = false
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.Download, "Import")
+                            }
+                        )
+                    }
                 }
             },
             colors = TopAppBarDefaults.largeTopAppBarColors(
@@ -689,4 +748,82 @@ class HomeScreenUI(
             )
         }
     }
+
+    private fun exportProjectsToCsv(context: Context, projects: List<Project>, uri: Uri) {
+        try {
+            val header = "ID,Client Name,Phone Number,Description,Total Payment,Advance Payment,Is Completed,Is Paid,Creation Date,Last Modified Date\n"
+            val content = StringBuilder().append(header)
+
+            projects.forEach { project ->
+                content.append("${project.id},")
+                    .append("\"${project.clientName}\",")
+                    .append("${project.phoneNumber},")
+                    .append("\"${project.description}\",")
+                    .append("${project.totalPayment},")
+                    .append("${project.advancePayment},")
+                    .append("${project.isCompleted},")
+                    .append("${project.isPaid},")
+                    .append("${project.creationDate.time},")
+                    .append("${project.lastModifiedDate.time}\n")
+            }
+
+            context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                outputStream.write(content.toString().toByteArray())
+            }
+
+            Toast.makeText(
+                context,
+                "Export successful",
+                Toast.LENGTH_SHORT
+            ).show()
+        } catch (e: Exception) {
+            Toast.makeText(
+                context,
+                "Export failed: ${e.message}",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    private fun importProjectsFromCsv(context: Context, uri: Uri) {
+        try {
+            context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                BufferedReader(InputStreamReader(inputStream)).use { reader ->
+                    // Skip header
+                    reader.readLine()
+
+                    // Read content
+                    reader.lineSequence()
+                        .filter { it.isNotBlank() }
+                        .map { line ->
+                            val values = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)".toRegex())
+                            Project(
+                                id = values[0].toLongOrNull() ?: 0L,
+                                clientName = values[1].trim('"'),
+                                phoneNumber = values[2],
+                                description = values[3].trim('"'),
+                                totalPayment = values[4].toDoubleOrNull() ?: 0.0,
+                                advancePayment = values[5].toDoubleOrNull() ?: 0.0,
+                                isCompleted = values[6].toBoolean(),
+                                isPaid = values[7].toBoolean(),
+                                creationDate = Date(values[8].toLongOrNull() ?: System.currentTimeMillis()),
+                                lastModifiedDate = Date(values[9].toLongOrNull() ?: System.currentTimeMillis())
+                            )
+                        }
+                        .forEach { project ->
+                            viewModel.addProject(project)
+                        }
+                }
+            }
+            Toast.makeText(context, "Import successful", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(
+                context,
+                "Import failed: ${e.message}",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+
 }
