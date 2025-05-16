@@ -22,7 +22,6 @@ object Routes {
 
     // Route with parameters
     fun projectDetailRoute(projectId: Long): String = "$PROJECT_DETAIL/$projectId"
-    fun editProjectRoute(projectId: Long): String = "$ADD_EDIT_PROJECT/$projectId"
 }
 
 @Composable

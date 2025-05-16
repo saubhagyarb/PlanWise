@@ -121,7 +121,8 @@ class AddEditScreenUI(
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .verticalScroll(rememberScrollState()),
+                            .verticalScroll(rememberScrollState())
+                            .imePadding(),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         // Basic Information Section
@@ -320,6 +321,7 @@ class AddEditScreenUI(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
+                        .imePadding()
                         .verticalScroll(rememberScrollState())
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
