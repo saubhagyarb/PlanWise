@@ -63,7 +63,9 @@ class AddEditScreenUI(
         val isLandscape = orientation == Configuration.ORIENTATION_LANDSCAPE
 
         Scaffold(
-            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+            modifier = Modifier.
+                fillMaxSize().
+                nestedScroll(scrollBehavior.nestedScrollConnection),
             topBar = {
                 TopAppBar(
                     title = {
