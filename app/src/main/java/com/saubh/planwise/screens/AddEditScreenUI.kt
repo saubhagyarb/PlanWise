@@ -713,8 +713,8 @@ class AddEditScreenUI(
             isValid = false
         }
 
-        if (phoneNumber.isBlank()) {
-            setPhoneNumberError("Phone number is required")
+        if (phoneNumber.isBlank() && phoneNumber.length >= 10) {
+            setPhoneNumberError("Invalid or missing phone number")
             isValid = false
         }
 

@@ -291,13 +291,13 @@ class HomeScreenUI(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Default.AccountBalance,
                         label = "Total Amount",
-                        value = formatAmountAbbreviated(projects.sumOf { it.totalPayment })
+                        value = viewModel.formatAmountAbbreviated(projects.sumOf { it.totalPayment })
                     )
                     CompactFinanceInfo(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Default.Check,
                         label = "Received",
-                        value = formatAmountAbbreviated(projects.sumOf { it.advancePayment })
+                        value = viewModel.formatAmountAbbreviated(projects.sumOf { it.advancePayment })
                     )
                 }
             }
@@ -384,14 +384,6 @@ class HomeScreenUI(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-        }
-    }
-    private fun formatAmountAbbreviated(amount: Double): String {
-        return when {
-            amount >= 1_00_00_000 -> String.format(locale = null,"%.1fCr", amount / 1_00_00_000)
-            amount >= 1_00_000 -> String.format(locale = null, "%.1fL", amount / 1_00_000)
-            amount >= 1000 -> String.format(locale = null, "%.1fK", amount / 1000)
-            else -> String.format(locale = null, "%.0f", amount)
         }
     }
 
@@ -648,7 +640,7 @@ class HomeScreenUI(
                             Spacer(Modifier.width(6.dp))
                         }
                         Text(
-                            text = viewModel.formatCurrency(project.totalPayment),
+                            text = viewModel.formatAmountAbbreviated(project.totalPayment),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary

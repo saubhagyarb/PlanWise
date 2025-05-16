@@ -1,12 +1,6 @@
 package com.saubh.planwise.data
 
 import android.app.Application
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -85,8 +79,16 @@ class ProjectViewModel(application: Application = Application()) : ViewModel() {
     }
 
     fun formatCurrency(amount: Double): String {
-        val format = NumberFormat.getCurrencyInstance(Locale("en", "IN"))
-        return format.format(amount)
+        return "₹${NumberFormat.getInstance(Locale.getDefault()).format(amount)}"
+    }
+
+    fun formatAmountAbbreviated(amount: Double): String {
+        return when {
+            amount >= 1_00_00_000 -> String.format(locale = null,"₹%.1fCr", amount / 1_00_00_000)
+            amount >= 1_00_000 -> String.format(locale = null, "₹%.1fL", amount / 1_00_000)
+            amount >= 1000 -> String.format(locale = null, "₹%.1fK", amount / 1000)
+            else -> String.format(locale = null, "₹%.0f", amount)
+        }
     }
 
 }
