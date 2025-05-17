@@ -61,19 +61,50 @@ class ProjectViewModel(application: Application = Application()) : ViewModel() {
     }
 
     fun calculateDaysActive(creationDate: Date): String {
-        val diff = Date().time - creationDate.time
-        val days = diff / (24 * 60 * 60 * 1000)
-        return "$days days"
+        val calendar = Calendar.getInstance()
+        val today = calendar.apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.time
+
+        val inputCalendar = Calendar.getInstance().apply { time = creationDate }
+        inputCalendar.set(Calendar.HOUR_OF_DAY, 0)
+        inputCalendar.set(Calendar.MINUTE, 0)
+        inputCalendar.set(Calendar.SECOND, 0)
+        inputCalendar.set(Calendar.MILLISECOND, 0)
+
+        val daysDiff = ((today.time - inputCalendar.timeInMillis) / (24 * 60 * 60 * 1000)).toInt()
+
+        return when (daysDiff) {
+            0 -> "Today"
+            1 -> "1 day"
+            else -> "$daysDiff days"
+        }
     }
 
     fun formatRelativeDate(date: Date): String {
-        val now = System.currentTimeMillis()
-        val diff = now - date.time
+        val calendar = Calendar.getInstance()
+        val today = calendar.apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.time
+
+        val inputCalendar = Calendar.getInstance().apply { time = date }
+        inputCalendar.set(Calendar.HOUR_OF_DAY, 0)
+        inputCalendar.set(Calendar.MINUTE, 0)
+        inputCalendar.set(Calendar.SECOND, 0)
+        inputCalendar.set(Calendar.MILLISECOND, 0)
+
+        val daysDiff = ((today.time - inputCalendar.timeInMillis) / (24 * 60 * 60 * 1000)).toInt()
 
         return when {
-            diff < 24 * 60 * 60 * 1000 -> "today"
-            diff < 48 * 60 * 60 * 1000 -> "yesterday"
-            diff < 7 * 24 * 60 * 60 * 1000 -> "${diff / (24 * 60 * 60 * 1000)} days ago"
+            daysDiff == 0 -> "Today"
+            daysDiff == 1 -> "Yesterday"
+            daysDiff < 7 -> "$daysDiff days ago"
             else -> SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(date)
         }
     }

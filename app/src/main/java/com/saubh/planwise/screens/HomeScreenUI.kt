@@ -120,14 +120,12 @@ class HomeScreenUI(
         val context = LocalContext.current
         var showMenu by remember { mutableStateOf(false) }
 
-        // File picker launcher for import
         val importLauncher = rememberLauncherForActivityResult(
             contract = ActivityResultContracts.GetContent()
         ) { uri: Uri? ->
             uri?.let { importProjectsFromCsv(context, it) }
         }
 
-        // Create file picker launcher for export
         val exportLauncher = rememberLauncherForActivityResult(
             contract = ActivityResultContracts.CreateDocument("text/csv")
         ) { uri: Uri? ->
@@ -165,23 +163,32 @@ class HomeScreenUI(
                         modifier = Modifier.padding(4.dp)
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Export to File") },
+                            text = { Text("Download file") },
                             onClick = {
                                 exportLauncher.launch("projects_${System.currentTimeMillis()}.csv")
                                 showMenu = false
                             },
                             leadingIcon = {
-                                Icon(Icons.Default.Upload, "Export")
+                                Icon(
+                                    painter = painterResource(R.drawable.download),
+                                    contentDescription = "Download",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
                             }
                         )
+
                         DropdownMenuItem(
-                            text = { Text("Import from File") },
+                            text = { Text("Upload from file") },
                             onClick = {
                                 importLauncher.launch("*/*")
                                 showMenu = false
                             },
                             leadingIcon = {
-                                Icon(Icons.Default.Download, "Import")
+                                Icon(
+                                    painter = painterResource(R.drawable.upload),
+                                    contentDescription = "Upload",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
                             }
                         )
                     }
@@ -274,6 +281,7 @@ class HomeScreenUI(
                     modifier = Modifier.padding(horizontal = 4.dp)
                 ) {
                     FilterChip(
+                        shape = RoundedCornerShape(24.dp),
                         selected = selectedFilter == filter,
                         onClick = { onFilterSelected(filter) },
                         label = {
@@ -289,10 +297,7 @@ class HomeScreenUI(
                                     }
                                 })"
                             )
-                        },
-                        leadingIcon = if (selectedFilter == filter) {
-                            { Icon(Icons.Default.Check, null, Modifier.size(16.dp)) }
-                        } else null
+                        }
                     )
                 }
             }
@@ -375,7 +380,7 @@ class HomeScreenUI(
         Surface(
             modifier = modifier,
             color = backgroundColor,
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(48.dp)
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -421,7 +426,7 @@ class HomeScreenUI(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .size(40.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(24.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Icon(
@@ -504,6 +509,10 @@ class HomeScreenUI(
                 ) { project ->
                     ProjectCard(project = project)
                 }
+
+                item {
+                    Spacer(modifier = Modifier.height(48.dp))
+                }
             }
         }
     }
@@ -559,7 +568,6 @@ class HomeScreenUI(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Avatar section
                     Box(
                         modifier = Modifier
                             .size(36.dp)
@@ -610,7 +618,7 @@ class HomeScreenUI(
                                     data = "tel:${project.phoneNumber}".toUri()
                                 }
                                 try {
-                                    ContextCompat.startActivity(context, intent, null)
+                                    ContextCompat.startActivities(context, arrayOf(intent), null)
                                 } catch (_: Exception) {
                                     Toast.makeText(context, "Unable to make call", Toast.LENGTH_SHORT).show()
                                 }
@@ -632,7 +640,7 @@ class HomeScreenUI(
                                     }".toUri()
                                 }
                                 try {
-                                    ContextCompat.startActivity(context, intent, null)
+                                    ContextCompat.startActivities(context, arrayOf(intent), null)
                                 } catch (_: Exception) {
                                     Toast.makeText(context, "WhatsApp not installed", Toast.LENGTH_SHORT).show()
                                 }
@@ -668,84 +676,12 @@ class HomeScreenUI(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Box(modifier = Modifier.weight(0.6f)) {
-                        PaymentProgressBar(
-                            progress = project.paymentProgress,
-                            showLabel = false,
-                            isPaid = project.isPaid
-                        )
+                        PaymentProgressBar(project)
                     }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(0.4f),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        if (project.isCompleted) {
-                            Surface(
-                                color = MaterialTheme.colorScheme.primaryContainer,
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = "Completed",
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = Modifier
-                                        .size(16.dp)
-                                        .padding(2.dp)
-                                )
-                            }
-                            Spacer(Modifier.width(6.dp))
-                        }
-                        Text(
-                            text = viewModel.formatAmountAbbreviated(project.totalPayment),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
+                    Spacer(modifier = Modifier.width(24.dp))
+                    ProjectStatusChip(project)
                 }
             }
-        }
-    }
-
-    @Composable
-    fun PaymentProgressBar(
-        progress: Float,
-        showLabel: Boolean = false,
-        isPaid: Boolean
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            if (showLabel) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Payment Progress",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "${(progress * 100).toInt()}%",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp)),
-                color = if (isPaid)
-                    MaterialTheme.colorScheme.primary
-                else
-                    MaterialTheme.colorScheme.tertiary
-            )
         }
     }
 

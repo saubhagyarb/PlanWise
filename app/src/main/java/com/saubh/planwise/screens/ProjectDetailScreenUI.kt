@@ -535,7 +535,8 @@ class ProjectDetailScreenUI(
                     Text(
                         text = project.clientName,
                         style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(start = 32.dp)
                     )
                 }
                 HorizontalDivider()
