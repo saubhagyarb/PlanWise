@@ -63,6 +63,7 @@ class AddEditScreenUI(
         val isLandscape = orientation == Configuration.ORIENTATION_LANDSCAPE
 
         Scaffold(
+            contentWindowInsets = WindowInsets.displayCutout,
             modifier = Modifier.
                 fillMaxSize().
                 nestedScroll(scrollBehavior.nestedScrollConnection),

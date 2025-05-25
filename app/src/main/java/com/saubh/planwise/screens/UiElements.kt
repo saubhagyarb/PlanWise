@@ -22,8 +22,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.saubh.planwise.data.Project
-import java.text.NumberFormat
+import com.saubh.planwise.data.ProjectViewModel
 
+val viewModel = ProjectViewModel()
 @Composable
 internal fun ProjectStatusChip(project: Project) {
     Surface(
@@ -72,7 +73,7 @@ internal fun PaymentProgressBar(project: Project) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = NumberFormat.getCurrencyInstance().format(project.totalPayment),
+                text = viewModel.formatCurrency(project.totalPayment),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary

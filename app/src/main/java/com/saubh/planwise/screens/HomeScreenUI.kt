@@ -760,6 +760,4 @@ class HomeScreenUI(
             ).show()
         }
     }
-
-
 }
