@@ -22,7 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.saubh.planwise.data.Project
-import com.saubh.planwise.data.ProjectViewModel
+import com.saubh.planwise.screens.ProjectViewModel
 
 val viewModel = ProjectViewModel()
 @Composable

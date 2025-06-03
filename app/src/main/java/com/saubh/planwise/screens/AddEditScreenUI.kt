@@ -24,7 +24,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.saubh.planwise.data.Project
-import com.saubh.planwise.data.ProjectViewModel
+import com.saubh.planwise.screens.ProjectViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.util.Date

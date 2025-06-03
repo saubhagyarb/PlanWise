@@ -8,7 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.saubh.planwise.data.ProjectViewModel
+import com.saubh.planwise.screens.ProjectViewModel
 import com.saubh.planwise.screens.AddEditScreenUI
 import com.saubh.planwise.screens.HomeScreenUI
 import com.saubh.planwise.screens.ProjectDetailScreenUI

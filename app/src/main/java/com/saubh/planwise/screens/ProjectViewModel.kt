@@ -1,9 +1,12 @@
-package com.saubh.planwise.data
+package com.saubh.planwise.screens
 
 import android.app.Application
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.saubh.planwise.data.AppDatabase
+import com.saubh.planwise.data.Project
+import com.saubh.planwise.data.ProjectRepository
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
@@ -13,7 +16,7 @@ import java.util.Locale
 
 class ProjectViewModel(application: Application = Application()) : ViewModel() {
 
-    val repository = ProjectRepository(AppDatabase.getDatabase(application).projectDao())
+    val repository = ProjectRepository(AppDatabase.Companion.getDatabase(application).projectDao())
     var projectList = mutableStateListOf<Project>()
         private set
 

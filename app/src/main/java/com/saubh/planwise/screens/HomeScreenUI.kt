@@ -43,7 +43,7 @@ import androidx.navigation.NavController
 import com.saubh.planwise.R
 import com.saubh.planwise.data.Project
 import com.saubh.planwise.data.ProjectFilter
-import com.saubh.planwise.data.ProjectViewModel
+import com.saubh.planwise.screens.ProjectViewModel
 import com.saubh.planwise.navigation.Routes
 import kotlinx.coroutines.launch
 import java.io.BufferedReader

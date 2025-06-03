@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.saubh.planwise.data.ProjectViewModel
+import com.saubh.planwise.screens.ProjectViewModel
 import com.saubh.planwise.navigation.AppNavigation
 import com.saubh.planwise.ui.theme.PlanWiseTheme
 
